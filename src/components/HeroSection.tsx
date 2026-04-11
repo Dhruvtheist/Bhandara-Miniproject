@@ -30,7 +30,7 @@ const HeroSection = () => {
   const [stats, setStats] = useState({ totalMeals: 0, activeEvents: 0, cities: 0 });
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/impact/stats")
+    fetch(`${import.meta.env.VITE_API_URL}/impact/stats`)
       .then(res => res.json())
       .then(data => setStats(data))
       .catch(err => console.error(err));

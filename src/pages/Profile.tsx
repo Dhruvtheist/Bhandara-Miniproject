@@ -10,8 +10,6 @@ import EventCard, { FoodEvent } from "@/components/EventCard";
 import { toast } from "sonner";
 import { format, isToday, isTomorrow } from "date-fns";
 
-const API_URL = "http://localhost:5000/api";
-
 const formatDateLabel = (dateStr: string) => {
   const d = new Date(dateStr);
   if (isToday(d)) return "Today";
@@ -41,7 +39,7 @@ const Profile = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_URL}/users/profile/${id}`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/users/profile/${id}`);
         if (res.ok) {
           const data = await res.json();
           setProfile(data.user);
@@ -49,7 +47,7 @@ const Profile = () => {
           setEditForm({ bio: data.user.bio || "", website: data.user.website || "" });
           
           // Fetch events for this specific user
-          const eventsRes = await fetch(`${API_URL}/events`); // Filtered logic on backend is better, but this works for now
+          const eventsRes = await fetch(`${import.meta.env.VITE_API_URL}/events`); // Filtered logic on backend is better, but this works for now
           if (eventsRes.ok) {
             const allEvents = await eventsRes.json();
             const userEvents = allEvents.filter((e: any) => (e.organizerId?._id || e.organizerId) === id);
@@ -83,7 +81,7 @@ const Profile = () => {
 
   const handleUpdateProfile = async () => {
     try {
-      const res = await fetch(`${API_URL}/users/profile`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/users/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

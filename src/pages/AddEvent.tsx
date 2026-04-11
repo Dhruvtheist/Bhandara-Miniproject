@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
-const API_URL = "http://localhost:5000/api";
-
 const AddEvent = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -45,7 +43,7 @@ const AddEvent = () => {
     try {
       const token = localStorage.getItem("token");
       
-      const res = await fetch(`${API_URL}/events`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/events`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

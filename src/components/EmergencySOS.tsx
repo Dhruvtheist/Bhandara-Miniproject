@@ -8,8 +8,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AlertCircle, Send, Phone, MapPin, Info } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = "http://localhost:5000/api";
-
 const EmergencySOS = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -30,7 +28,7 @@ const EmergencySOS = () => {
     
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/emergency`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/emergency`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",

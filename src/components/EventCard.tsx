@@ -24,8 +24,6 @@ export interface FoodEvent {
   lng?: number;
 }
 
-const API_URL = "http://localhost:5000/api";
-
 const typeColors: Record<FoodEvent["type"], string> = {
   bhandara: "bg-primary text-primary-foreground",
   ngo: "bg-secondary text-secondary-foreground",
@@ -48,7 +46,7 @@ const EventCard = ({ event }: { event: FoodEvent }) => {
     if (!confirm("Are you sure you want to delete this event?")) return;
     
     try {
-      const res = await fetch(`${API_URL}/events/${event.id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/events/${event.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
@@ -63,7 +61,7 @@ const EventCard = ({ event }: { event: FoodEvent }) => {
   const handleUpdateServings = async (newCount: number) => {
     if (newCount < 0) return;
     try {
-      const res = await fetch(`${API_URL}/events/${event.id}/servings`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/events/${event.id}/servings`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
@@ -86,7 +84,7 @@ const EventCard = ({ event }: { event: FoodEvent }) => {
       return;
     }
     try {
-      const res = await fetch(`${API_URL}/events/${event.id}/volunteer`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/events/${event.id}/volunteer`, {
         method: "POST",
         headers: { 
           Authorization: `Bearer ${localStorage.getItem("token")}` 

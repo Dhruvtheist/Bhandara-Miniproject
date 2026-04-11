@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { toast as sonnerToast } from "sonner";
 
-const SOCKET_URL = "http://localhost:5000";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -15,7 +14,7 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const socket = io(SOCKET_URL);
+    const socket = io(import.meta.env.VITE_SOCKET_URL);
     socket.on("newEmergency", (data) => {
       setHasNewEmergency(true);
       if (user?.role === "Organizer") {

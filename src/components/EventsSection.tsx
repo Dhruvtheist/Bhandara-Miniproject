@@ -9,9 +9,6 @@ import { io } from "socket.io-client";
 import { toast as sonnerToast } from "sonner";
 import EventMap from "./EventMap";
 
-const API_URL = "http://localhost:5000/api";
-const SOCKET_URL = "http://localhost:5000";
-
 const filters = [
   { label: "All Events", value: "all" },
   { label: "Bhandara", value: "bhandara" },
@@ -41,7 +38,7 @@ const EventsSection = ({ searchQuery }: { searchQuery: string }) => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const res = await fetch(`${API_URL}/events?q=${searchQuery}&type=${activeFilter}`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/events?q=${searchQuery}&type=${activeFilter}`);
         if (res.ok) {
           const data = await res.json();
           setEvents(
@@ -75,7 +72,7 @@ const EventsSection = ({ searchQuery }: { searchQuery: string }) => {
   }, [searchQuery, activeFilter]);
 
   useEffect(() => {
-    const socket = io(SOCKET_URL);
+    const socket = io(import.meta.env.VITE_SOCKET_URL);
     socket.on("eventCreated", (e: any) => {
       sonnerToast.success("New food event nearby!", {
         description: `${e.title} was just posted.`,

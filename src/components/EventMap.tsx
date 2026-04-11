@@ -24,8 +24,6 @@ const icons: Record<string, L.Icon> = {
   user: createCustomIcon('blue')
 };
 
-const API_URL = "http://localhost:5000/api";
-
 const EventMap = ({ events }: { events: FoodEvent[] }) => {
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -41,7 +39,7 @@ const EventMap = ({ events }: { events: FoodEvent[] }) => {
         return;
       }
       try {
-        const res = await fetch(`${API_URL}/events/${id}/volunteer`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/events/${id}/volunteer`, {
           method: "POST",
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
         });

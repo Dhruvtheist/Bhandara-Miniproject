@@ -7,8 +7,6 @@ import { HandHeart, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-const API_URL = "http://localhost:5000/api";
-
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -34,7 +32,7 @@ const Auth = () => {
         ? { email, password } 
         : { email, password, fullName, role: isOrganizer ? "Organizer" : "User" };
 
-      const res = await fetch(`${API_URL}${endpoint}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
