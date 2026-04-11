@@ -9,8 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const API_URL = "http://localhost:5000/api";
 
-const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -29,26 +28,25 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? "/auth/login" : "/auth/register";
-      const payload = isLogin 
-        ? { email, password } 
-        : { email, password, fullName, role: isOrganizer ? "Organizer" : "User" };
-
-      const res = await fetch(`${API_URL}${endpoint}`, {
+      const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ 
+          email, 
+          password, 
+          fullName, 
+          role: isOrganizer ? "Organizer" : "User" 
+        }),
       });
 
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.error || "Authentication failed");
+        throw new Error(data.error || "Registration failed");
       }
 
       setAuthInfo(data.token, data.user);
-      
-      toast({ title: isLogin ? "Welcome back!" : "Account created successfully!" });
+      toast({ title: "Account created successfully!" });
       navigate("/");
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -66,26 +64,22 @@ const Auth = () => {
         </a>
 
         <div className="bg-card border border-border rounded-2xl p-8">
-          <h1 className="text-2xl font-bold font-display mb-2">
-            {isLogin ? "Welcome back" : "Create account"}
-          </h1>
+          <h1 className="text-2xl font-bold font-display mb-2">Create account</h1>
           <p className="text-sm text-muted-foreground mb-6">
-            {isLogin ? "Sign in to manage your food events" : "Join Food Connect to share food with your community"}
+            Join Food Connect to share food with your community
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Your name"
-                  required={!isLogin}
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Your name"
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -109,33 +103,31 @@ const Auth = () => {
                 minLength={6}
               />
             </div>
-            {!isLogin && (
-              <div className="flex items-center space-x-2 pt-1 border-t border-border mt-4">
-                <input
-                  type="checkbox"
-                  id="isOrganizer"
-                  checked={isOrganizer}
-                  onChange={(e) => setIsOrganizer(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary cursor-pointer"
-                />
-                <Label htmlFor="isOrganizer" className="text-sm font-medium leading-none cursor-pointer">
-                  I want to host and manage food events
-                </Label>
-              </div>
-            )}
+            <div className="flex items-center space-x-2 pt-1 border-t border-border mt-4">
+              <input
+                type="checkbox"
+                id="isOrganizer"
+                checked={isOrganizer}
+                onChange={(e) => setIsOrganizer(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary cursor-pointer"
+              />
+              <Label htmlFor="isOrganizer" className="text-sm font-medium leading-none cursor-pointer">
+                I want to host and manage food events
+              </Label>
+            </div>
             <Button type="submit" className="w-full rounded-xl" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isLogin ? "Sign In" : "Sign Up"}
+              Sign Up
             </Button>
           </form>
 
           <p className="text-sm text-center text-muted-foreground mt-6">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+            Already have an account?{" "}
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => navigate("/auth")}
               className="text-primary font-medium hover:underline"
             >
-              {isLogin ? "Sign up" : "Sign in"}
+              Sign in
             </button>
           </p>
         </div>
@@ -144,4 +136,4 @@ const Auth = () => {
   );
 };
 
-export default Auth;
+export default Signup;

@@ -1,13 +1,32 @@
-import { useState } from "react";
+import { Menu, X, HandHeart, LogOut, User as UserIcon, Bell, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, HandHeart, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+import { toast as sonnerToast } from "sonner";
+
+const SOCKET_URL = "http://localhost:5000";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [hasNewEmergency, setHasNewEmergency] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const socket = io(SOCKET_URL);
+    socket.on("newEmergency", (data) => {
+      setHasNewEmergency(true);
+      if (user?.role === "Organizer") {
+        sonnerToast.error("🚨 EMERGENCY SOS RECEIVED", {
+          description: `${data.fullName} needs help at ${data.location}`,
+          duration: 10000,
+        });
+      }
+    });
+    return () => { socket.disconnect(); };
+  }, [user]);
 
   const handleAddEvent = () => {
     if (user) {
@@ -31,15 +50,18 @@ const Navbar = () => {
           <a href="/#about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">About</a>
           {user ? (
             <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate(`/profile/${user.id}`)} title="My Profile" className="rounded-full">
+                <UserIcon className="h-5 w-5 text-primary" />
+              </Button>
               <Button className="rounded-xl" onClick={handleAddEvent}>Add Event</Button>
               <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <Button variant="outline" className="rounded-xl" onClick={() => navigate("/auth")}>Sign In</Button>
-              <Button className="rounded-xl" onClick={handleAddEvent}>Add Event</Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" className="rounded-xl text-muted-foreground hover:text-foreground" onClick={() => navigate("/auth")}>Sign In</Button>
+              <Button className="rounded-xl shadow-lg shadow-primary/20" onClick={() => navigate("/signup")}>Sign Up</Button>
             </div>
           )}
         </div>
@@ -56,13 +78,14 @@ const Navbar = () => {
           <a href="/#about" className="block text-sm font-medium text-muted-foreground" onClick={() => setOpen(false)}>About</a>
           {user ? (
             <>
+              <a href={`/profile/${user.id}`} className="block text-sm font-medium text-muted-foreground" onClick={() => setOpen(false)}>My Profile</a>
               <Button className="w-full rounded-xl" onClick={() => { setOpen(false); handleAddEvent(); }}>Add Event</Button>
               <Button variant="outline" className="w-full rounded-xl" onClick={() => { setOpen(false); signOut(); }}>Sign Out</Button>
             </>
           ) : (
             <>
               <Button variant="outline" className="w-full rounded-xl" onClick={() => { setOpen(false); navigate("/auth"); }}>Sign In</Button>
-              <Button className="w-full rounded-xl" onClick={() => { setOpen(false); handleAddEvent(); }}>Add Event</Button>
+              <Button className="w-full rounded-xl" onClick={() => { setOpen(false); navigate("/signup"); }}>Sign Up</Button>
             </>
           )}
         </div>

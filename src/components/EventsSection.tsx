@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 import EventCard, { FoodEvent } from "./EventCard";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { LayoutGrid, Map as MapIcon, Plus, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { format, isToday, isTomorrow } from "date-fns";
+import { io } from "socket.io-client";
+import { toast as sonnerToast } from "sonner";
+import EventMap from "./EventMap";
+
+const API_URL = "http://localhost:5000/api";
+const SOCKET_URL = "http://localhost:5000";
 
 const filters = [
   { label: "All Events", value: "all" },
@@ -15,21 +20,19 @@ const filters = [
 ];
 
 const formatDateLabel = (dateStr: string) => {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = new Date(dateStr);
   if (isToday(d)) return "Today";
   if (isTomorrow(d)) return "Tomorrow";
   return format(d, "EEEE, MMM d");
 };
 
-const formatTime = (t: string) => {
-  const [h, m] = t.split(":");
-  const date = new Date();
-  date.setHours(parseInt(h), parseInt(m));
-  return format(date, "h:mm a");
+const formatTime = (d: Date) => {
+  return format(d, "h:mm a");
 };
 
-const EventsSection = () => {
+const EventsSection = ({ searchQuery }: { searchQuery: string }) => {
   const [activeFilter, setActiveFilter] = useState("all");
+  const [isMapView, setIsMapView] = useState(false);
   const [events, setEvents] = useState<FoodEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -37,30 +40,84 @@ const EventsSection = () => {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const { data, error } = await supabase
-        .from("food_events")
-        .select("*")
-        .gte("event_date", new Date().toISOString().split("T")[0])
-        .order("event_date", { ascending: true });
-
-      if (!error && data) {
-        setEvents(
-          data.map((e: any) => ({
-            id: e.id,
-            title: e.title,
-            organizer: e.organizer,
-            type: e.type as FoodEvent["type"],
-            location: e.location,
-            time: `${formatTime(e.start_time)} – ${formatTime(e.end_time)}`,
-            date: formatDateLabel(e.event_date),
-            servingsLeft: e.servings_available,
-            isLive: e.is_live,
-          }))
-        );
+      try {
+        const res = await fetch(`${API_URL}/events?q=${searchQuery}&type=${activeFilter}`);
+        if (res.ok) {
+          const data = await res.json();
+          setEvents(
+            data.map((e: any) => ({
+              id: e._id,
+              title: e.title,
+              city: e.city,
+              organizer: e.organizerId?.fullName || "Anonymous Host",
+              type: e.type || "community",
+              location: e.location,
+              time: formatTime(new Date(e.dateTime)),
+              date: formatDateLabel(e.dateTime),
+              servingsLeft: e.availableServings,
+              imageUrl: e.imageUrl,
+              isLive: e.status === "active",
+              organizerId: e.organizerId?._id || e.organizerId,
+              volunteerCount: e.volunteers?.length || 0,
+              isOrganizerVerified: e.organizerId?.isVerified || false,
+              lat: e.coordinates?.lat || 28.6139,
+              lng: e.coordinates?.lng || 77.2090
+            }))
+          );
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchEvents();
+  }, [searchQuery, activeFilter]);
+
+  useEffect(() => {
+    const socket = io(SOCKET_URL);
+    socket.on("eventCreated", (e: any) => {
+      sonnerToast.success("New food event nearby!", {
+        description: `${e.title} was just posted.`,
+      });
+      setEvents((prev) => [{
+        id: e._id,
+        title: e.title,
+        city: e.city,
+        organizer: e.organizerId?.fullName || "A Host",
+        type: e.type || "community",
+        location: e.location,
+        time: formatTime(new Date(e.dateTime)),
+        date: formatDateLabel(e.dateTime),
+        servingsLeft: e.availableServings,
+        imageUrl: e.imageUrl,
+        isLive: e.status === "active",
+        organizerId: e.organizerId?._id || e.organizerId,
+        volunteerCount: e.volunteers?.length || 0,
+        isOrganizerVerified: e.organizerId?.isVerified || false,
+        lat: e.coordinates?.lat || 28.6139,
+        lng: e.coordinates?.lng || 77.2090
+      }, ...prev]);
+    });
+
+    socket.on("eventUpdated", (e: any) => {
+      setEvents((prev) => prev.map((event) => event.id === e._id ? {
+        ...event,
+        servingsLeft: e.availableServings,
+        isLive: e.status === "active",
+        imageUrl: e.imageUrl,
+        volunteerCount: e.volunteers?.length || 0,
+        isOrganizerVerified: e.organizerId?.isVerified || false
+      } : event));
+    });
+
+    socket.on("eventDeleted", (id: string) => {
+      setEvents((prev) => prev.filter((event) => event.id !== id));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const filtered = activeFilter === "all"
@@ -85,20 +142,39 @@ const EventsSection = () => {
           </Button>
         </div>
 
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-          {filters.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setActiveFilter(f.value)}
-              className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                activeFilter === f.value
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+            {filters.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setActiveFilter(f.value)}
+                className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                  activeFilter === f.value
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex bg-muted p-1 rounded-xl self-start">
+            <button 
+              onClick={() => setIsMapView(false)}
+              className={`p-2 rounded-lg flex items-center gap-2 text-xs font-semibold transition-all ${!isMapView ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
-              {f.label}
+              <LayoutGrid className="h-4 w-4" />
+              Grid
             </button>
-          ))}
+            <button 
+              onClick={() => setIsMapView(true)}
+              className={`p-2 rounded-lg flex items-center gap-2 text-xs font-semibold transition-all ${isMapView ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <MapIcon className="h-4 w-4" />
+              Map
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -109,6 +185,10 @@ const EventsSection = () => {
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-lg font-medium mb-2">No events yet</p>
             <p className="text-sm">Be the first to add a food event!</p>
+          </div>
+        ) : isMapView ? (
+          <div className="animate-fade-in">
+            <EventMap events={filtered} />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

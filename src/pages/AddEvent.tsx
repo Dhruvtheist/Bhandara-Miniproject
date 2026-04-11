@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { useEffect } from "react";
+
+const API_URL = "http://localhost:5000/api";
 
 const AddEvent = () => {
   const { user, loading: authLoading } = useAuth();
@@ -20,8 +20,12 @@ const AddEvent = () => {
   const [form, setForm] = useState({
     title: "",
     organizer: "",
+    city: "",
     type: "community" as "bhandara" | "ngo" | "community",
     location: "",
+    imageUrl: "",
+    lat: "28.6139",
+    lng: "77.2090",
     event_date: "",
     start_time: "",
     end_time: "",
@@ -39,21 +43,35 @@ const AddEvent = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from("food_events").insert({
-        user_id: user.id,
-        title: form.title,
-        organizer: form.organizer,
-        type: form.type,
-        location: form.location,
-        event_date: form.event_date,
-        start_time: form.start_time,
-        end_time: form.end_time,
-        servings_available: parseInt(form.servings_available) || 0,
-        description: form.description || null,
-        is_live: false,
+      const token = localStorage.getItem("token");
+      
+      const res = await fetch(`${API_URL}/events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: form.title,
+          city: form.city,
+          type: form.type,
+          location: form.location,
+          imageUrl: form.imageUrl,
+          coordinates: {
+            lat: parseFloat(form.lat) || 28.6139,
+            lng: parseFloat(form.lng) || 77.2090
+          },
+          dateTime: new Date(`${form.event_date}T${form.start_time}`),
+          availableServings: parseInt(form.servings_available) || 0,
+          description: form.description || undefined
+        })
       });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to create event");
+      }
+
       toast({ title: "Event created!", description: "Your food event has been posted." });
       navigate("/");
     } catch (error: any) {
@@ -87,9 +105,9 @@ const AddEvent = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="space-y-2">
-              <Label>Event Type</Label>
+              <Label>Type</Label>
               <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as any })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -100,8 +118,27 @@ const AddEvent = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input id="location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. MG Road, Delhi" required />
+              <Label htmlFor="city">City</Label>
+              <Input id="city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="e.g. Delhi" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Area / Landmark</Label>
+              <Input id="location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. MG Road, Near Metro" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Photo URL (Optional)</Label>
+              <Input id="imageUrl" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://unsplash.com/photos/..." />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label htmlFor="lat">Latitude (Optional)</Label>
+              <Input id="lat" value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} placeholder="28.6139" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lng">Longitude (Optional)</Label>
+              <Input id="lng" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} placeholder="77.2090" />
             </div>
           </div>
 
